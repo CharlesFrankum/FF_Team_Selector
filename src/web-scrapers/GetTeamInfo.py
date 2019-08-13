@@ -14,7 +14,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
 
 
-
 def login_to_ff(home_url, transfer_url):
     driver.get(home_url)
     sleep(delay)
