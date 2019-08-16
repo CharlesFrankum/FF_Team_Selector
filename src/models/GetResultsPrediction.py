@@ -8,7 +8,7 @@ import pickle
 
 from sklearn.linear_model import LinearRegression
 
-from Mapper import df_ISO3_mapper
+from TeamMapper import df_ISO3_mapper
 
 def get_gameweek():
     path = f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv'
