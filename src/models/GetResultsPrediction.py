@@ -8,27 +8,7 @@ import pickle
 
 from sklearn.linear_model import LinearRegression
 
-
-
-def upper_case_df(df):
-    for col in df.columns:
-        if df[col].dtype in (str, object):
-            df[col] = df[col].str.upper()
-    return df
-
-
-def strip_whitespaces(df):
-    for col in df.columns:
-        if df[col].dtype in (str, object):
-            df[col] = df[col].str.strip()
-    return df
-
-
-def ISO3_mapper(df, mapper):
-    df = upper_case_df(df)
-    df = strip_whitespaces(df)
-    return df.replace(mapper)
-
+from Mapper import df_ISO3_mapper
 
 def get_gameweek():
     path = f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv'
@@ -62,7 +42,7 @@ def get_results(df):
 def get_old_data(mapper):
     path = f'{os.path.dirname(os.getcwd())}\\data\\Results\\results_2018.csv'
     res = pd.read_csv(path)
-    res = ISO3_mapper(res, mapper)
+    res = df_ISO3_mapper(res, mapper)
     
     # Currently grabbing last season's data from an alternative source
     # Therefore some preprocessing is needed
@@ -176,7 +156,7 @@ if __name__ == '__main__':
     # results data for name mapping
     path = f'{os.path.dirname(os.getcwd())}\\data\\Results\\results.csv'
     results = pd.read_csv(path)
-    results = ISO3_mapper(results, mapper)
+    results = df_ISO3_mapper(results, mapper)
     
     if get_gameweek() < 4:
         results = pd.concat([results, get_old_data(mapper)])
