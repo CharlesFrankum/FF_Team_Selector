@@ -12,14 +12,12 @@ from tqdm import tqdm
 
 import re
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
 
 
-def scrape_current_player_stats(url):
+def scrape_current_player_stats(url, gameweek, driver):
     driver.get(url)
     sleep(2)
     players_dict = {}                                              
@@ -32,7 +30,7 @@ def scrape_current_player_stats(url):
             ActionChains(driver).move_to_element(player).perform()
             sleep(0.5)
             # click on player info pop up
-            player.find_element_by_css_selector('div > button').click()
+            player.find_element_by_tag_name('button').click()
             sleep(0.5)
             # Player name, club, position and fitness        
             info_box = driver.find_element_by_css_selector('div.ElementDialog__Summary-gmefnd-0.eSbpQR')
@@ -69,10 +67,18 @@ def scrape_current_player_stats(url):
             # Full player stats data for premier league season
             x = driver.page_source
             player_data = pd.read_html(x)
-            if len(player_data) < 3:
+            if len(player_data) == 1:
                 player_stats = None
-                player_history = player_data[1]
-                player_history.columns = [re.sub('\n','',x).strip().split(' ')[0] for x in player_history.columns]
+                player_history = None
+            elif len(player_data) == 2:
+                if gameweek == 1:
+                    player_stats = None
+                    player_history = player_data[1]
+                    player_history.columns = [re.sub('\n','',x).strip().split(' ')[0] for x in player_history.columns]
+                else:
+                    player_history = None
+                    player_stats = player_data[1]
+                    player_stats.columns = [re.sub('\n','',x).strip().split(' ')[0] for x in player_stats.columns]
             else:
                 player_stats = player_data[1]
                 player_stats.columns = [re.sub('\n','',x).strip().split(' ')[0] for x in player_stats.columns]
@@ -105,12 +111,10 @@ def save_player_stats(player_stats):
         pickle.dump(player_stats, file)       
 
 
-if __name__ == '__main__':
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
-    
-    fixtures_url = 'https://fantasy.premierleague.com/a/statistics/total_points'
-    player_stats = scrape_current_player_stats(fixtures_url)
+def collect(driver):
+    print('Collecting player statistics...')
+    fixtures = f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv'
+    gameweek = min(pd.read_csv(fixtures)['gameweek'])
+    stats_url = 'https://fantasy.premierleague.com/a/statistics/total_points'
+    player_stats = scrape_current_player_stats(stats_url, gameweek, driver)
     save_player_stats(player_stats)
