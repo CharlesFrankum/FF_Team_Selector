@@ -6,15 +6,14 @@ import pandas as pd
 
 import pickle
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
 from time import sleep
 
 
-def login_to_ff(home_url, transfer_url):
+
+def login_to_ff(home_url, transfer_url, delay, driver):
     driver.get(home_url)
     sleep(delay)
     username_el = driver.find_element_by_css_selector('#loginUsername')
@@ -32,7 +31,7 @@ def login_to_ff(home_url, transfer_url):
     sleep(delay)
 
 
-def get_current_team():
+def get_current_team(driver):
     # Get the current list of players and prices
     query = 'div.sc-bdVaJa.sc-bwzfXH.Pitch__ElementRow-sc-1mctasb-1.Pitch__PitchRow-sc-1mctasb-2.iZgvKz'
     player_rows = driver.find_elements_by_css_selector(query)
@@ -57,7 +56,7 @@ def get_current_team():
     return player_price, {'Sell Price': sum(player_price['sell_price'])}
 
 
-def get_scoreboard_info(info):
+def get_scoreboard_info(info, driver):
     query = 'div.Scoreboard__CostScoreboardUnit-sc-117tw9n-1.cMrwVx'
     transferboard_elements = driver.find_elements_by_css_selector(query)
     wild_card_status = transferboard_elements[2].text
@@ -74,7 +73,7 @@ def get_scoreboard_info(info):
 
 
 # Grab starting line up and captain and vice_captain info
-def get_line_up(team_url):
+def get_line_up(team_url, delay, driver):
     # Go to the team select page
     driver.get(team_url)
     sleep(delay)
@@ -126,7 +125,7 @@ def get_line_up(team_url):
     return df
 
 
-def get_cards_status(scoreboard):
+def get_cards_status(scoreboard, driver):
     cards = driver.find_elements_by_css_selector('li.MyTeam__ChipItem-sc-6ytjxx-2.bDjYjd')
     for card in cards:
         card_data = card.text.split('\n')
@@ -143,29 +142,24 @@ def save_team_info(team):
         pickle.dump(team, f)
 
 
-def get_transfer_info():
-    login_to_ff(home_url, transfer_url)
-    team_df, info = get_current_team()
-    info = get_scoreboard_info(info)
-    captain_df = get_line_up(team_url)
+def get_transfer_info(home_url, transfer_url, team_url, delay, driver):
+    login_to_ff(home_url, transfer_url, delay, driver)
+    team_df, info = get_current_team(driver)
+    info = get_scoreboard_info(info, driver)
+    captain_df = get_line_up(team_url, delay, driver)
     df = pd.merge(team_df, captain_df, on = 'team_players')
     team_info = {
             'players': df,
-            'info': get_cards_status(info)
+            'info': get_cards_status(info, driver)
             }
     save_team_info(team_info)
 
 
 
-if __name__ == '__main__':
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
-    delay = 3
-    
+def collect(driver):
+    print('Collecting team info...')
+    delay = 2
     home_url = 'https://fantasy.premierleague.com'
     transfer_url = 'https://fantasy.premierleague.com/a/squad/transfers'
     team_url = 'https://fantasy.premierleague.com/a/team/my'
-    
-    get_transfer_info()
+    get_transfer_info(home_url, transfer_url, team_url, delay, driver)
