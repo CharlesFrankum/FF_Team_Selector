@@ -13,3 +13,7 @@ There is no option implemented currently to run the web scrapers individually.
 
 - Run GetData.py to run all the web scrapers
 - Collected data will be saved in the src/Data directory
+
+# Known Issues
+
+- Scraping whilst a game is being played currently causes some data issues which break the prediction/cleaning models
