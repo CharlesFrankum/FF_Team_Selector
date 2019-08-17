@@ -1,11 +1,16 @@
 import os
 
+import sys
+
+sys.path.insert(1, f'{os.path.dirname(os.getcwd())}\\models\\')
+
 from datetime import datetime
 
 from time import sleep
 
 import pandas as pd
 
+from Mapper import df_ISO3_mapper
 
 
 def get_fixture_data(url, driver):
@@ -27,13 +32,17 @@ def get_fixture_data(url, driver):
             game_day = day.find_element_by_tag_name('ul').text
             games = game_day.split('\n')
             if ':' in game_day:
-                for i in range(0, len(games), 3):
-                    home_teams.append(games[i])
-                    away_teams.append(games[i+2])
+                # work around to keep loop consistent with game updates
+                n_games = []
+                for item in games:
+                    new_items = item.split(':')
+                    for i in new_items:
+                        n_games.append(i)
+                for i in range(0, len(n_games), 4):
+                    home_teams.append(n_games[i])
+                    away_teams.append(n_games[i+3])
                     
-                    time = games[i+1]
-                    date_time = ' '.join([date, time])
-                    date_time = datetime.strptime(date_time, '%A %d %B %Y %H:%M')
+                    date_time = datetime.strptime(date, '%A %d %B %Y')
                     date_times.append(date_time)
                     gameweeks.append(gw_counter)
         df = pd.DataFrame({'home_team':home_teams,'away_team':away_teams,'datetime':date_times,'gameweek':gameweeks})
@@ -45,8 +54,9 @@ def save_csv(data):
     data.to_csv(path, index=0, sep=',')
 
     
-def collect(driver):
+def collect(driver, mapper):
     print('Collecting fixtures...')
     fixtures_url = 'https://fantasy.premierleague.com/fixtures/'
     fixtures = get_fixture_data(fixtures_url, driver)
+    fixtures = df_ISO3_mapper(fixtures, mapper)
     save_csv(fixtures)
