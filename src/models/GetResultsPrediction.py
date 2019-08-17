@@ -8,7 +8,6 @@ import pickle
 
 from sklearn.linear_model import LinearRegression
 
-from TeamMapper import df_ISO3_mapper
 
 def get_gameweek():
     path = f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv'
@@ -39,10 +38,9 @@ def get_results(df):
 # A minimum of 4 weeks of this season's data is needed.
 # Will combine last season's data if we have less than 4.
 # Note - newly promoted teams won't have relevant data (gets excluded later)
-def get_old_data(mapper):
+def get_old_data():
     path = f'{os.path.dirname(os.getcwd())}\\data\\Results\\results_2018.csv'
     res = pd.read_csv(path)
-    res = df_ISO3_mapper(res, mapper)
     
     # Currently grabbing last season's data from an alternative source
     # Therefore some preprocessing is needed
@@ -149,17 +147,12 @@ def save_results_stats(res):
 
 if __name__ == '__main__':
     
-    path = f'{os.path.dirname(os.getcwd())}\\data\\Maps\\Team_maps.pickle'
-    with open(path, 'rb') as file:
-        mapper = pickle.load(file)
-        
     # results data for name mapping
     path = f'{os.path.dirname(os.getcwd())}\\data\\Results\\results.csv'
     results = pd.read_csv(path)
-    results = df_ISO3_mapper(results, mapper)
     
     if get_gameweek() < 4:
-        results = pd.concat([results, get_old_data(mapper)])
+        results = pd.concat([results, get_old_data()])
         
     results_dict = get_team_results(results)
     results_dict = generate_results_prediction(results_dict)
