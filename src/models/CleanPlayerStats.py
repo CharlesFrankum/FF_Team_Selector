@@ -6,18 +6,18 @@ import numpy as np
 
 
 
-def clean_history(df):
+def clean_history(stats):
     new_info = {}
-    if not df['history'] is None and len(df['history']) == 0:
+    if stats['history'] is not None and len(stats['history']) != 0:
         last_season = stats['history'].iloc[0]
         ppm = last_season['Pts'] / last_season['MP']
         ppm_value = ppm / float(stats['details']['Price'].split('£')[1])
         games_played = last_season['MP'] / 90
-        
+
         if np.isnan(ppm):
-            ppm = None
+            ppm = 0
         if np.isnan(ppm_value):
-            ppm_value = None
+            ppm_value = 0
         
         new_info['ls_ppm'] = ppm
         new_info['ls_ppm_value'] = ppm_value
@@ -28,14 +28,14 @@ def clean_history(df):
         new_info['Assists'] = last_season['A']
         new_info['CleanSheets'] = last_season['CS']
     else:
-        new_info['ls_ppm'] = None
-        new_info['ls_ppm_value'] = None
-        new_info['ls_games_played'] = None
+        new_info['ls_ppm'] = 0
+        new_info['ls_ppm_value'] = 0
+        new_info['ls_games_played'] = 0
         new_info['new_transfer'] = True
-        new_info['MinutesPlayed'] = None
-        new_info['GoalsScored'] = None
-        new_info['Assists'] = None
-        new_info['CleanSheets'] = None
+        new_info['MinutesPlayed'] = 0
+        new_info['GoalsScored'] = 0
+        new_info['Assists'] = 0
+        new_info['CleanSheets'] = 0
     
     return new_info
 
@@ -44,7 +44,7 @@ def clean_season(stats_dict):
     
     temp_df = stats_dict['stats']
     
-    if stats_dict['stats'] is not None and len(stats_dict['stats']) != 0:
+    if temp_df is not None and len(temp_df) != 0:
                 
         h_team = [x.split(' ')[0] if '(A)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
         a_team = [x.split(' ')[0] if '(H)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
