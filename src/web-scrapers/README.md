@@ -16,4 +16,4 @@ There is no option implemented currently to run the web scrapers individually.
 
 # Known Issues
 
-- Scraping whilst a game is being played currently causes some data issues which break the prediction/cleaning models
+- Scraping whilst a game is being played currently causes some data issues which breaks GetResultsPrediction.py
