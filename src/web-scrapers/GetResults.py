@@ -6,13 +6,11 @@ from time import sleep
 
 import pandas as pd
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException
 
 
 
-def get_season_results(url):
+def get_season_results(url, driver):
     driver.get(url)
     # holder lists to store data and then append to dataframe
     datetime_temp = []
@@ -98,16 +96,9 @@ def save_csv(res):
 
 
 
-if __name__ == '__main__':
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
-    
+def collect(driver):
+    print('Collecting results...')
     results_url = 'https://www.scorespro.com/soccer/england/premier-league/results/'
-
-    results = get_season_results(results_url)
+    results = get_season_results(results_url, driver)
     results = add_results_outcomes(results)
     save_csv(results)
-    
-    driver.quit()
