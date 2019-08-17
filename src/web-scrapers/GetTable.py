@@ -20,7 +20,8 @@ def save_csv(tab):
 
 
 
-if __name__ == '__main__':
+def collect():
+    print('Collecting current table...')
     table_url = 'https://www.skysports.com/premier-league-table'
     pl_table = get_PL_table(table_url)
     save_csv(pl_table)
