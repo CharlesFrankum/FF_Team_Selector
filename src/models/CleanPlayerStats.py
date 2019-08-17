@@ -41,11 +41,11 @@ def clean_history(df):
 
 
 def clean_season(stats_dict):
-
-    if len(stats_dict['stats']) != 0:
-        
-        temp_df = stats_dict['stats']
-        
+    
+    temp_df = stats_dict['stats']
+    
+    if stats_dict['stats'] is not None and len(stats_dict['stats']) != 0:
+                
         h_team = [x.split(' ')[0] if '(A)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
         a_team = [x.split(' ')[0] if '(H)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
         h_score = [x.split(' ')[2] for x in temp_df['OPP']]
@@ -57,13 +57,9 @@ def clean_season(stats_dict):
         temp_df['home_score'] = h_score
         temp_df['away_score'] = a_score
         temp_df['value'] = value
-    
-    # Create new columns using the strings in the opposition column
-    temp_df['home_team'] = [x.split(' ')[0] if '(A)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
-    temp_df['away_team'] = [x.split(' ')[0] if '(H)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
-    temp_df['home_score'] = [x.split(' ')[2] for x in temp_df['OPP']]
-    temp_df['away_score'] = [x.split(' ')[4] for x in temp_df['OPP']]
-    temp_df['£'] = [float(x.split('£')[1]) for x in temp_df['£']]
+        
+    else:
+        return temp_df
 
     # Delete the opposition column
     del temp_df['OPP']
