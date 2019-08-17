@@ -6,14 +6,9 @@ from time import sleep
 
 import pandas as pd
 
-from tqdm import tqdm
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 
 
-
-def get_fixture_data(url):
+def get_fixture_data(url, driver):
     # Get Fixture data for gameweeks 1-38
     home_teams = []
     away_teams = []
@@ -21,7 +16,7 @@ def get_fixture_data(url):
     gameweeks = []
     
     gw_counter = 0
-    for i in tqdm(range(1,39)):
+    for i in range(1,39):
         gw_counter += 1
         week = url+str(i)
         driver.get(week)
@@ -49,14 +44,9 @@ def save_csv(data):
     path = f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv'
     data.to_csv(path, index=0, sep=',')
 
-
-
-if __name__ == '__main__':
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    driver = webdriver.Chrome('chromedriver.exe', chrome_options=options)
-
+    
+def collect(driver):
+    print('Collecting fixtures...')
     fixtures_url = 'https://fantasy.premierleague.com/fixtures/'
-    fixtures = get_fixture_data(fixtures_url)
+    fixtures = get_fixture_data(fixtures_url, driver)
     save_csv(fixtures)
