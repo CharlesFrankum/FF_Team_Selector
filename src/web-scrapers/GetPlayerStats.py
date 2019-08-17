@@ -17,7 +17,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 
 
-def scrape_current_player_stats(url, gameweek, driver):
+def scrape_current_player_stats(url, gameweek, mapper, driver):
     driver.get(url)
     sleep(2)
     players_dict = {}                                              
@@ -88,7 +88,7 @@ def scrape_current_player_stats(url, gameweek, driver):
             ActionChains(driver).send_keys(Keys.ESCAPE).perform()    
             players_dict[name] = {}
             players_dict[name]['details'] = {}
-            players_dict[name]['details']['club'] = club
+            players_dict[name]['details']['club'] = mapper[club.upper()]
             players_dict[name]['details']['position'] = pos
             players_dict[name]['details']['fitness'] = fitness
             players_dict[name]['details']['recovery_date'] = recovery_date
@@ -111,10 +111,10 @@ def save_player_stats(player_stats):
         pickle.dump(player_stats, file)       
 
 
-def collect(driver):
+def collect(driver, mapper):
     print('Collecting player statistics...')
     fixtures = f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv'
     gameweek = min(pd.read_csv(fixtures)['gameweek'])
     stats_url = 'https://fantasy.premierleague.com/a/statistics/total_points'
-    player_stats = scrape_current_player_stats(stats_url, gameweek, driver)
+    player_stats = scrape_current_player_stats(stats_url, gameweek, mapper, driver)
     save_player_stats(player_stats)
