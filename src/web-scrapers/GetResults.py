@@ -1,5 +1,9 @@
 import os
 
+import sys
+
+sys.path.insert(1, f'{os.path.dirname(os.getcwd())}\\models\\')
+
 from datetime import datetime
 
 from time import sleep
@@ -8,6 +12,7 @@ import pandas as pd
 
 from selenium.common.exceptions import NoSuchElementException
 
+from Mapper import df_ISO3_mapper
 
 
 def get_season_results(url, driver):
@@ -96,9 +101,10 @@ def save_csv(res):
 
 
 
-def collect(driver):
+def collect(driver, mapper):
     print('Collecting results...')
     results_url = 'https://www.scorespro.com/soccer/england/premier-league/results/'
     results = get_season_results(results_url, driver)
     results = add_results_outcomes(results)
+    results = df_ISO3_mapper(results, mapper)
     save_csv(results)

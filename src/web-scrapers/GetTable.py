@@ -1,9 +1,14 @@
 import os
 
+import sys
+
+sys.path.insert(1, f'{os.path.dirname(os.getcwd())}\\models\\')
+
 import pandas as pd
 
 import requests
 
+from Mapper import df_ISO3_mapper
 
 
 def get_PL_table(url):
@@ -20,8 +25,9 @@ def save_csv(tab):
 
 
 
-def collect():
+def collect(mapper):
     print('Collecting current table...')
     table_url = 'https://www.skysports.com/premier-league-table'
     pl_table = get_PL_table(table_url)
+    pl_table = df_ISO3_mapper(pl_table, mapper)
     save_csv(pl_table)

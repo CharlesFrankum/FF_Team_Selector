@@ -1,5 +1,4 @@
-import pandas as pd
-    
+   
 def upper_case_df(df):
     for col in df.columns:
         if df[col].dtype in (str, object):
