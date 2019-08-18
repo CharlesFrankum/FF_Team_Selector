@@ -8,6 +8,8 @@ import pickle
 
 from sklearn.linear_model import LinearRegression
 
+from Mapper import df_ISO3_mapper
+
 
 def get_gameweek():
     path = f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv'
@@ -41,19 +43,45 @@ def get_results(df):
 def get_old_data():
     path = f'{os.path.dirname(os.getcwd())}\\data\\Results\\results_2018.csv'
     res = pd.read_csv(path)
-    
     # Currently grabbing last season's data from an alternative source
     # Therefore some preprocessing is needed
     res.columns = ['gameweek','datetime','loc','home_team','away_team','result']
-    # Get 12 - x games from last season
-    res = res[res['gameweek'] <= (12 - get_gameweek())]
     res['home_score'] = [int(h) for h,a in res['result'].str.split(' - ')]
     res['away_score'] = [int(a) for h,a in res['result'].str.split(' - ')]
     del res['loc']
     del res['result']
     del res['gameweek']
     res = get_results(res)
+    res['datetime'] = pd.to_datetime(res['datetime'])
     return res
+
+# Modify to get last 5 home and last 5 away
+def extract_most_recent_games(df, x):
+    new_df = pd.DataFrame()
+    teams = set(list(df['home_team']) + list(df['away_team']))
+    for i in teams:
+        # excludes recently demoted teams
+        if len(i) == 3:
+            home = df[df['home_team'] == i].sort_values(by='datetime', ascending=False)
+            away = df[df['away_team'] == i].sort_values(by='datetime', ascending=False)
+            # newly promoted teams to be based partially/fully off BHA
+            if len(home) < round(x/2):
+                temp_home =  df[df['home_team'] == 'BHA'].sort_values(by='datetime', ascending=False)
+                temp_home = temp_home.tail(round(x/2)-len(home))
+                home = pd.concat([home, temp_home])
+                home = home.replace({'BHA': i})
+            if len(away) < round(x/2):
+                temp_away =  df[df['away_team'] == 'BHA'].sort_values(by='datetime', ascending=False)
+                temp_away = temp_away.tail(round(x/2)-len(away))
+                away = pd.concat([away, temp_away])
+                away = away.replace({'BHA': i})
+                
+            home = home.head(round(x/2))
+            away = away.head(round(x/2))
+            team_df = pd.concat([home, away])
+            new_df = pd.concat([new_df, team_df])
+
+    return new_df
 
 
 def get_team_results(results):
@@ -65,40 +93,45 @@ def get_team_results(results):
             # excludes teams with too few recent PL games
             home = results[results['home_team'] == i]
             away = results[results['away_team'] == i]
-            if len(home) > 2 and len(away) > 2:
-                results_dict[i] = {}
-                
-                all_games = pd.concat([home, away])
-                results_h = [
-                        x[1] for x in enumerate(
-                                all_games['home_results']
-                                ) if all_games.iloc[x[0]]['home_team'] == i
-                        ]
-                results_a = [
-                        x[1] for x in enumerate(
-                                all_games['away_result']
-                                ) if all_games.iloc[x[0]]['away_team'] == i
-                        ]
-                all_results = results_h + results_a   
-                all_games['results'] = all_results   
+            results_dict[i] = {}
             
-                home.sort_values(
-                        by='datetime', inplace=True, ascending=True
-                        )
-                away.sort_values(
-                        by='datetime', inplace=True, ascending=True
-                        )
-                all_games.sort_values(
-                        by='datetime', inplace=True, ascending=True
-                        )
+            all_games = pd.concat([home, away])
+            results_h = [
+                    x[1] for x in enumerate(
+                            all_games['home_results']
+                            ) if all_games.iloc[x[0]]['home_team'] == i
+                    ]
+            results_a = [
+                    x[1] for x in enumerate(
+                            all_games['away_result']
+                            ) if all_games.iloc[x[0]]['away_team'] == i
+                    ]
+            all_results = results_h + results_a   
+            all_games['results'] = all_results
             
-                home['games_played'] = range(len(home))
-                away['games_played'] = range(len(away))
-                all_games['games_played'] = range(len(all_games))
+            # Currently picking up duplicates - hotfix to remove
+            home = home.drop_duplicates()
+            away = away.drop_duplicates()
+            all_games = all_games.drop_duplicates()
             
-                results_dict[i]['home'] = home
-                results_dict[i]['away'] = away
-                results_dict[i]['all_games'] = all_games
+            home.sort_values(
+                    by='datetime', inplace=True, ascending=True
+                    )
+            away.sort_values(
+                    by='datetime', inplace=True, ascending=True
+                    )
+            all_games.sort_values(
+                    by='datetime', inplace=True, ascending=True
+                    )
+            
+            home['games_played'] = range(len(home))
+            away['games_played'] = range(len(away))
+            all_games['games_played'] = range(len(all_games))
+                    
+            results_dict[i]['home'] = home
+            results_dict[i]['away'] = away
+            results_dict[i]['all_games'] = all_games
+            
                 
     return results_dict
 
@@ -141,19 +174,26 @@ def generate_results_prediction(results_dict):
 def save_results_stats(res):
     path = f'{os.path.dirname(os.getcwd())}\\data\\Results\\results_stats.pk'
     with open(path, 'wb') as file:
-        pickle.dump(res, file)       
+        pickle.dump(res, file)             
 
-
+                    
 
 if __name__ == '__main__':
     
-    # results data for name mapping
     path = f'{os.path.dirname(os.getcwd())}\\data\\Results\\results.csv'
     results = pd.read_csv(path)
+    results['datetime'] = pd.to_datetime(results['datetime'])
     
-    if get_gameweek() < 4:
-        results = pd.concat([results, get_old_data()])
+    if get_gameweek() < 6:
+        # Currently old results haven't been pre-mapped
+        map_path = f'{os.path.dirname(os.getcwd())}\\data\\Maps\\Team_maps.pickle'
+        with open(map_path, 'rb') as f:
+            mapper = pickle.load(f)
         
+        results = pd.concat([results, get_old_data()])
+        results = df_ISO3_mapper(results, mapper) 
+        results = extract_most_recent_games(results, 10)
+            
     results_dict = get_team_results(results)
     results_dict = generate_results_prediction(results_dict)
     
