@@ -11,6 +11,7 @@ There is no option implemented currently to run the web scrapers individually.
 
   ```pip install -r requirements.txt```
 
+- Enter your fantasy.premierleague.com username and password into the config.py file
 - Run GetData.py to run all the web scrapers
 - Collected data will be saved in the src/Data directory
 
