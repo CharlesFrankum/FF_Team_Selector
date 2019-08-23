@@ -17,4 +17,5 @@ There is no option implemented currently to run the web scrapers individually.
 
 # Known Issues
 
+- Only works on Windows OS for now - Containerised version tbc
 - Scraping whilst a game is being played currently causes some data issues which breaks GetResultsPrediction.py
