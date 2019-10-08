@@ -30,7 +30,7 @@ def login_to_ff(home_url, transfer_url, delay, driver):
     driver.get(transfer_url)
     sleep(delay)
 
-
+# Deprecated
 def get_current_team(driver):
     # Get the current list of players and prices
     query = 'div.sc-bdVaJa.sc-bwzfXH.Pitch__ElementRow-sc-1mctasb-1.Pitch__PitchRow-sc-1mctasb-2.iZgvKz'
@@ -56,7 +56,8 @@ def get_current_team(driver):
     return player_price, {'Sell Price': sum(player_price['sell_price'])}
 
 
-def get_scoreboard_info(info, driver):
+def get_scoreboard_info(driver):
+    info = {}
     query = 'div.Scoreboard__CostScoreboardUnit-sc-117tw9n-1.cMrwVx'
     transferboard_elements = driver.find_elements_by_css_selector(query)
     wild_card_status = transferboard_elements[2].text
@@ -79,7 +80,6 @@ def get_line_up(team_url, delay, driver):
     sleep(delay)
 
     s_team_rows = driver.find_elements_by_css_selector('div.sc-bdVaJa.sc-bwzfXH.Pitch__ElementRow-sc-1mctasb-1.Pitch__PitchRow-sc-1mctasb-2.iZgvKz')
-    b_team_row = driver.find_element_by_css_selector('div.Bench-sc-1sz52o9-0.gujtGz')
     
     players = []
     is_captain = []
@@ -88,12 +88,14 @@ def get_line_up(team_url, delay, driver):
     for row in s_team_rows:
         units = row.find_elements_by_css_selector('div.Pitch__PitchUnit-sc-1mctasb-3.gYXrCB')
         for unit in units:
-            player = unit.find_elements_by_css_selector('div.Pitch__ElementName-sc-1mctasb-6.cAvCos')
+            player = unit.find_elements_by_css_selector('div.PitchElementData__ElementName-sc-1u4y6pr-0.hZsmkV')
             if not len(player) == 0:
                 is_bench.append(0)
-                players.append(player[0].text)
+                #players.append(player[0].text)
                 player[0].click()
                 sleep(0.5)
+                player_text = driver.find_element_by_css_selector('div.Dialog__StyledHeader-sc-5bogmv-5.BHTvj').text
+                players.append(player_text.split('\n')[0])
                 dia_box = driver.find_element_by_css_selector('div.Dialog__StyledDialogBody-sc-5bogmv-7.heKQNQ')
                 lis = dia_box.find_elements_by_tag_name('li')
                 if len(lis) == 3:
@@ -109,12 +111,19 @@ def get_line_up(team_url, delay, driver):
                 
                 ActionChains(driver).send_keys(Keys.ESCAPE).perform()
                 sleep(0.5)
-    units = b_team_row.find_elements_by_css_selector('div.Pitch__ElementName-sc-1mctasb-6')
+
+    b_team_row = driver.find_element_by_css_selector('div.Bench-sc-1sz52o9-0.gujtGz')
+    units = b_team_row.find_elements_by_css_selector('div.PitchElementData__ElementName-sc-1u4y6pr-0.hZsmkV')
     for unit in units:
-        players.append(unit.text)
+        unit.click()
+        sleep(0.5)
+        player_text = driver.find_element_by_css_selector('div.Dialog__StyledHeader-sc-5bogmv-5.BHTvj').text
+        players.append(player_text.split('\n')[0])
         is_captain.append(0)
         is_v_captain.append(0)
         is_bench.append(1)
+        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+        sleep(0.5)
                 
     df = pd.DataFrame({
             'team_players':players,
@@ -144,16 +153,13 @@ def save_team_info(team):
 
 def get_transfer_info(home_url, transfer_url, team_url, delay, driver):
     login_to_ff(home_url, transfer_url, delay, driver)
-    team_df, info = get_current_team(driver)
-    info = get_scoreboard_info(info, driver)
-    captain_df = get_line_up(team_url, delay, driver)
-    df = pd.merge(team_df, captain_df, on = 'team_players')
+    info = get_scoreboard_info(driver)
+    df = get_line_up(team_url, delay, driver)
     team_info = {
             'players': df,
             'info': get_cards_status(info, driver)
             }
     save_team_info(team_info)
-
 
 
 def collect(driver):
