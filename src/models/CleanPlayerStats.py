@@ -44,46 +44,48 @@ def clean_season(stats_dict):
     temp_df = stats_dict['stats']
 
     # drops results which haven't been played
-    if '-' not in temp_df.iloc[-1]['OPP']:
-        temp_df = temp_df.iloc[:-1]
+    if not temp_df is None:
+        if '-' not in temp_df.iloc[-1]['OPP']:
+            temp_df = temp_df.iloc[:-1]
+        
+        if temp_df is not None and len(temp_df) != 0:
+            
+            h_team = [x.split(' ')[0] if '(A)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
+            a_team = [x.split(' ')[0] if '(H)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
+            h_score = [x.split(' ')[2] for x in temp_df['OPP']]
+            a_score = [x.split(' ')[4] for x in temp_df['OPP']]
+            value = [float(x.split('£')[1]) for x in temp_df['£']]
+            
+            temp_df['home_team'] = h_team
+            temp_df['away_team'] = a_team
+            temp_df['home_score'] = h_score
+            temp_df['away_score'] = a_score
+            temp_df['value'] = value
+            
+        else:
+            return temp_df
     
-    if temp_df is not None and len(temp_df) != 0:
-        
-        h_team = [x.split(' ')[0] if '(A)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
-        a_team = [x.split(' ')[0] if '(H)' in x else stats_dict['details']['club']  for x in temp_df['OPP']]
-        h_score = [x.split(' ')[2] for x in temp_df['OPP']]
-        a_score = [x.split(' ')[4] for x in temp_df['OPP']]
-        value = [float(x.split('£')[1]) for x in temp_df['£']]
-        
-        temp_df['home_team'] = h_team
-        temp_df['away_team'] = a_team
-        temp_df['home_score'] = h_score
-        temp_df['away_score'] = a_score
-        temp_df['value'] = value
-        
-    else:
-        return temp_df
-
-    # Delete the opposition column
-    del temp_df['OPP']
-    del temp_df['£']
-
-    # Rename the columns
-    temp_df.columns = ['GameWeek','Points','MinutesPlayed','GoalsScored',
-                       'Assists','CleanSheets','GoalsConceded','OwnGoals',
-                       'PenaltySaves','PenaltyMisses','YellowCards',
-                       'RedCards','Saves','Bonus','BonusPointSystem',
-                       'Influence','Creativity','Threat','IctIndex',
-                       'NetTransfers', 'SelectedBy', 'home_team',
-                       'away_team', 'home_goals', 'away_goals', 'value']
-    # Reorder columns
-    return temp_df[['GameWeek','home_team','away_team','home_goals',
-                    'away_goals','Points','MinutesPlayed','GoalsScored',
-                    'Assists', 'CleanSheets','GoalsConceded','OwnGoals',
-                    'PenaltySaves','PenaltyMisses','YellowCards',
-                    'RedCards','Saves','Bonus','BonusPointSystem',
-                    'Influence','Creativity','Threat','IctIndex',
-                    'NetTransfers', 'SelectedBy', 'value']]
+        # Delete the opposition column
+        del temp_df['OPP']
+        del temp_df['£']
+    
+        # Rename the columns
+        temp_df.columns = ['GameWeek','Points','MinutesPlayed','GoalsScored',
+                           'Assists','CleanSheets','GoalsConceded','OwnGoals',
+                           'PenaltySaves','PenaltyMisses','YellowCards',
+                           'RedCards','Saves','Bonus','BonusPointSystem',
+                           'Influence','Creativity','Threat','IctIndex',
+                           'NetTransfers', 'SelectedBy', 'home_team',
+                           'away_team', 'home_goals', 'away_goals', 'value']
+        # Reorder columns
+        temp_df = temp_df[['GameWeek','home_team','away_team','home_goals',
+                        'away_goals','Points','MinutesPlayed','GoalsScored',
+                        'Assists', 'CleanSheets','GoalsConceded','OwnGoals',
+                        'PenaltySaves','PenaltyMisses','YellowCards',
+                        'RedCards','Saves','Bonus','BonusPointSystem',
+                        'Influence','Creativity','Threat','IctIndex',
+                        'NetTransfers', 'SelectedBy', 'value']]
+    return temp_df
 
 
 

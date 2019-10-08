@@ -10,6 +10,8 @@ from sklearn.linear_model import LinearRegression
 
 from scipy.stats import poisson
 
+from collections import Counter
+
 
 ## Read in the datasets
 # Player statistics data
@@ -281,7 +283,6 @@ def temp_func(player_stats, gameweek):
     
     # =============================================================================
     #             sum([y for x,y in points_prob_array]) # Check this later - probability doesn't quite add up to one - may be rounding error
-    
     # ============================================================================= 
     
     player_points_dict = {}
@@ -352,25 +353,12 @@ def temp_func(player_stats, gameweek):
         
     return player_value_prices
 
-# Combining the above is again too expensive, therefore as a short-term solution work out the optimal x buys for each position given a budget
-# total budget is approx 100 - higher for forwards
-# any left over budget can be added to the budget for next position (forwards > midfielders > defenders)
-# get the top 10000 combinations and then reduce by rule of 3
-# focus primarily on starting xi
-
-# GK budget = 5 * 2 = 10
-# Def budget = 6 * 5 = 30
-# Mid budget = 7 * 5 = 35
-# For budget = 8 * 3 = 24
-# Total = 10 + 30 + 35 + 24 = 99
-
 # Chooses the optimal items based on the items' weight and value. There are 2
 # Constratints; W represents the total allowed maximum weight and capacity of
 # the items and C represents the exact number of items we want returned
 # i.e. The optimal n items from the item list
 # Function not working 100% but is close enough for good results
-# Easier to implement pre-filter logic than to add extra rules to knapsack
-# Takes about 13 minutes to generate best 11 players from all players given a budget of 80 mil
+# Easier to implement post-filter logic than to add extra rules to knapsack
 
 def xknapsack(capacity, nbitems, maxitems, weight, value):
     #ks_matrix = np.zeros((capacity + 1, nbitems, maxitems + 1))
@@ -414,11 +402,6 @@ def xknapsack(capacity, nbitems, maxitems, weight, value):
                 result = y[0]
                 items = y[1]
     
-#==============================================================================
-#     # Bug where -1 gets added? Hotfix is just to remove
-#     if -1 in items:
-#         items.remove(-1)
-#==============================================================================
     return result, items
 
 def find_optimal_players(players_dict, budget, maxitems):
@@ -434,62 +417,116 @@ def find_optimal_players(players_dict, budget, maxitems):
     return best_players, overall_price, overall_score
 
 
-# GK budget = 5 * 2 = 10
-## Starting = 6
-## Bench = 4
-# Def budget = 6 * 5 = 30
-## Starting = 25
-## Bench = 
-# Mid budget = 7 * 5 = 35
-## Starting = 7.5 * 4 = 30
-## Bench = 
-# For budget = 8 * 3 = 24
-## Starting = 18
-## Bench = 
-# Total = 10 + 30 + 35 + 24 = 99
-
-goalkeepers = {k:v for k,v in player_stats.items() if v['details']['position'] == 'Goalkeeper'}
-defenders = {k:v for k,v in player_stats.items() if v['details']['position'] == 'Defender'}
-midfielders = {k:v for k,v in player_stats.items() if v['details']['position'] == 'Midfielder'}
-forwards = {k:v for k,v in player_stats.items() if v['details']['position'] == 'Forward'}
-
-# Manually remove
-midfielders = {k:v for k,v in midfielders.items() if k != 'Heung-Min Son'}
-defenders = {k:v for k,v in defenders.items() if k != 'Andrew Robertson'}
-midfielders = {k:v for k,v in midfielders.items() if k != 'Jeffrey Schlupp'}
-
-print('Calculating optimal combination of players...')
-
-# Starting - BUG WHERE VALLUE = 0
-sg = find_optimal_players(temp_func(goalkeepers, gameweek), budget=60, maxitems=1)
-sd = find_optimal_players(temp_func(defenders, gameweek), budget=250, maxitems=4)
-sm = find_optimal_players(temp_func(midfielders, gameweek), budget=300, maxitems=4)
-sf = find_optimal_players(temp_func(forwards, gameweek), budget=180, maxitems=2)
-
-# Remove selected
-goalkeepers = {k:v for k,v in goalkeepers.items() if k not in [x[0] for x in sg[0]]}
-defenders = {k:v for k,v in defenders.items() if k not in [x[0] for x in sd[0]]}
-midfielders = {k:v for k,v in midfielders.items() if k not in [x[0] for x in sm[0]]}
-forwards = {k:v for k,v in forwards.items() if k not in [x[0] for x in sf[0]]}
-
-# Bench
-bg = find_optimal_players(temp_func(goalkeepers, gameweek), budget=50, maxitems=1)
-bd = find_optimal_players(temp_func(defenders, gameweek), budget=50, maxitems=1)
-bm = find_optimal_players(temp_func(midfielders, gameweek), budget=55, maxitems=1)
-bf = find_optimal_players(temp_func(forwards, gameweek), budget=60, maxitems=1)
+def get_worst_club(club_players, players):
+    res = {x:z/y for x,y,z in [x for x in players if x[0] in club_players]}
+    return [x for x,y in Counter(res).most_common()[3-len(res):]]
 
 
-print(f'Starting GK: {[x[0] for x in sg[0]]}')
-print(f'Starting DEF: {[x[0] for x in sd[0]]}')
-print(f'Starting MID: {[x[0] for x in sm[0]]}')
-print(f'Starting FWD: {[x[0] for x in sf[0]]}')
-
-print(f'Bench GK: {[x[0] for x in bg[0]]}')
-print(f'Bench DEF: {[x[0] for x in bd[0]]}')
-print(f'Bench MID: {[x[0] for x in bm[0]]}')
-print(f'Bench FWD: {[x[0] for x in bf[0]]}')
+def get_worst_pos(pos, num, players):
+    res = {x:z/y for x,y,z in players if x in pos}
+    return [x for x,y in Counter(res).most_common()[num-len(res):]]
 
 
+def initiate_info(test_players, player_stats):
+    player_clubs = {x:player_stats[x]['details']['club'] for x,y,z in test_players}
+    club_counts = Counter(player_clubs.values())
+    return ([x for x,y,z in test_players if player_stats[x]['details']['position'] == 'Goalkeeper'],
+            [x for x,y,z in test_players if player_stats[x]['details']['position'] == 'Defender'],
+            [x for x,y,z in test_players if player_stats[x]['details']['position'] == 'Midfielder'],
+            [x for x,y,z in test_players if player_stats[x]['details']['position'] == 'Forward'],
+            player_clubs,
+            club_counts,
+            [k for k,v in club_counts.items() if v > 3])
+
+ 
+def find_replacement_players(n_gk, n_def, n_mid, n_for, budget, player_data):
+
+    n = n_gk + n_def + n_mid + n_for
+    
+    all_players = temp_func(player_data, gameweek)  # Add pos to this function so we can use it to check if budget is possible
+    if sum(sorted({v['price'] for k,v in all_players.items()})[:n])*10 > budget:
+        raise ValueError('no player left within budget') # Add pos to this function to get an accurate read
+    
+    new_player_stats = player_data
+    test_players = find_optimal_players(temp_func(player_data, gameweek), budget=budget, maxitems=n)
+    budget = budget - test_players[1]*10
+    new_test_players = test_players[0]
+    goalkeepers, defenders, midfielders, forwards, player_clubs, club_counts, remove_clubs = initiate_info(new_test_players, player_data)
+    
+    res = []
+    while len(goalkeepers) != n_gk or len(defenders) != n_def or len(midfielders) != n_mid or len(forwards) != n_for or max(club_counts.values()) > 3:
+        print('Calulating...')
+        
+        worst_players = []
+        for pos, num in [(goalkeepers, n_gk), (defenders, n_def), (midfielders, n_mid), (forwards, n_for)]:
+            
+            if len(pos) > num:
+                worst_players.extend(get_worst_pos(pos, num, new_test_players))
+                
+        for club in remove_clubs:
+            remove_club_players = [x for x,y,z in test_players if player_data[x]['details']['club'] == club]
+            
+            if len(remove_club_players) > 0:
+                worst_players.extend(get_worst_club(remove_club_players, new_test_players))
+                
+                    
+        if len(worst_players) > 0:
+    
+            new_player_stats = {k:v for k,v in new_player_stats.items() if k not in [x[0] for x in new_test_players]}
+            
+            new_test_players = [x for x in new_test_players if x[0] not in worst_players]
+            goalkeepers, defenders, midfielders, forwards, player_clubs, club_counts, remove_clubs = initiate_info(new_test_players, player_data)
+            player_pool = {}
+            for pos, str1, num in [(goalkeepers, 'Goalkeeper', n_gk), (defenders, 'Defender', n_def), (midfielders, 'Midfielder', n_mid), (forwards, 'Forward', n_for)]:
+                if len(pos) < num:
+                    player_pool.update({k:v for k,v in new_player_stats.items() if v['details']['position'] == str1})
+                    
+            budget = int(sum([v['price'] for k,v in all_players.items() if k in worst_players])*10)
+            x = len(worst_players)
+            
+            player_pool = temp_func(player_pool, gameweek)
+            if sum(sorted({v['price'] for k,v in player_pool.items()})[:x])*10 > budget:
+                raise ValueError('no player left within budget')
+            
+            test3 = find_optimal_players(player_pool, budget=budget, maxitems=x) 
+    
+            budget = budget - test3[1]*10
+            new_test_players.extend(test3[0])
+            res.extend(test3[0])
+    
+            goalkeepers, defenders, midfielders, forwards, player_clubs, club_counts, remove_clubs = initiate_info(new_test_players, player_data)
+    
+    print(new_test_players)
+    
+find_replacement_players(
+        n_gk = 1,
+        n_def = 1,
+        n_mid = 3,
+        n_for = 0,
+        budget = 300,
+        player_data = player_stats
+        )  
+
+
+team_path = open(f'{os.path.dirname(os.getcwd())}\\data\\Team\\Team_info.pk', 'rb')
+team_info = pickle.load(team_path)
+
+budget = team_info['info']['Bank Money']
+team_players = team_info['players']['team_players']
+
+substitute_dict = {}
+for player in team_players:
+    all_players[player]
+# Add code to chose best formation from players chosen and best captain and vice captain for the week
+    
+    
+    
+    
+    
+
+    
+    
+    
 
 # Use betting sites to identify other stats such as clean sheets and to score odds
 
