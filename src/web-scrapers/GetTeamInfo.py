@@ -88,7 +88,7 @@ def get_line_up(team_url, delay, driver):
     for row in s_team_rows:
         units = row.find_elements_by_css_selector('div.Pitch__PitchUnit-sc-1mctasb-3.gYXrCB')
         for unit in units:
-            player = unit.find_elements_by_css_selector('div.PitchElementData__ElementName-sc-1u4y6pr-0.hZsmkV')
+            player = unit.find_elements_by_css_selector('img')
             if not len(player) == 0:
                 is_bench.append(0)
                 #players.append(player[0].text)

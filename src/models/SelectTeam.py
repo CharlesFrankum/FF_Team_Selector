@@ -22,6 +22,9 @@ player_stats = pickle.load(player_path)
 results_path = open(f'{os.path.dirname(os.getcwd())}\\data\\Results\\results_stats.pk', 'rb')
 result_stats = pickle.load(results_path)
 
+team_path = open(f'{os.path.dirname(os.getcwd())}\\data\\Team\\Team_info.pk', 'rb')
+team_info = pickle.load(team_path)
+
 pl_table = pd.read_csv(f'{os.path.dirname(os.getcwd())}\\data\\Table\\table.csv')
 gameweeks = pd.read_csv(f'{os.path.dirname(os.getcwd())}\\data\\Fixtures\\fixtures.csv')
 mapper = pickle.load(open(f'{os.path.dirname(os.getcwd())}\\data\\Maps\\Team_maps.pickle', 'rb'))
@@ -49,6 +52,9 @@ def pred_points_weeks(player_stats, gameweek):
                 base_prediction = {k:90*v['details']['ls_ppm'] for k,v in player_stats.items()}
                 points =  np.array([base_prediction[k]] * (7 - gameweek) + list(player_stats[k]['stats']['Points']))
                 gameweeks = np.array(range(len(points))).reshape(-1, 1)
+            elif 'Points' not in player_stats[k]['stats'].columns:
+                points =  np.array([0]*gameweek)
+                gameweeks =  np.array(range(gameweek)).reshape(-1, 1)
             else:
                 points = np.array(player_stats[k]['stats']['Points'])
                 gameweeks =  np.array(range(len(points))).reshape(-1, 1)
@@ -78,6 +84,7 @@ def drop_new_transfers(player_stats):
 def drop_suspended(player_stats):
     return None
 
+# deprecated
 def drop_low_games(player_stats):
     new_dict = {}
     for k,v in player_stats.items():
@@ -88,8 +95,10 @@ def drop_low_games(player_stats):
             pass
     return new_dict
 
-player_stats = drop_unfit(player_stats)
-player_stats = drop_low_games(player_stats)
+#==============================================================================
+# player_stats = drop_unfit(player_stats)
+# player_stats = drop_low_games(player_stats)
+#==============================================================================
 
 match_odds = {}
 # Add odds and goals stats to the table - these are just approximate and need to be updated weekly
@@ -341,12 +350,13 @@ def temp_func(player_stats, gameweek):
         for k,v in val.items():
             avg_pred_points[k] += v
     
-    player_value_prices ={}
+    player_value_prices = {}
     for k,v in player_stats.items():
         try:
             player_value_prices[k] = {}
             player_value_prices[k]['price'] = float(v['details']['Price'].split('£')[1])
             player_value_prices[k]['value'] = avg_pred_points[k]/6
+            player_value_prices[k]['position'] = v['details']['position']
         except:
             player_value_prices[k]['value'] = 0
             pass
@@ -455,7 +465,6 @@ def find_replacement_players(n_gk, n_def, n_mid, n_for, budget, player_data):
     
     res = []
     while len(goalkeepers) != n_gk or len(defenders) != n_def or len(midfielders) != n_mid or len(forwards) != n_for or max(club_counts.values()) > 3:
-        print('Calulating...')
         
         worst_players = []
         for pos, num in [(goalkeepers, n_gk), (defenders, n_def), (midfielders, n_mid), (forwards, n_for)]:
@@ -496,27 +505,69 @@ def find_replacement_players(n_gk, n_def, n_mid, n_for, budget, player_data):
     
             goalkeepers, defenders, midfielders, forwards, player_clubs, club_counts, remove_clubs = initiate_info(new_test_players, player_data)
     
-    print(new_test_players)
+    return new_test_players
     
-find_replacement_players(
-        n_gk = 1,
-        n_def = 1,
-        n_mid = 3,
-        n_for = 0,
-        budget = 300,
-        player_data = player_stats
-        )  
+#==============================================================================
+# find_replacement_players(
+#         n_gk = 1,
+#         n_def = 1,
+#         n_mid = 3,
+#         n_for = 0,
+#         budget = 300,
+#         player_data = player_stats
+#         )  
+#==============================================================================
+
+##
 
 
-team_path = open(f'{os.path.dirname(os.getcwd())}\\data\\Team\\Team_info.pk', 'rb')
-team_info = pickle.load(team_path)
+def get_best_substitute(player_stats, gameweek, team_info):
+    all_players = temp_func(player_stats, gameweek)
+    
+    budget = team_info['info']['Bank Money']
+    team_players = team_info['players']['team_players']
+    
+    new_player_stats = {
+            k:v for k,v in player_stats.items()
+            if k not in list(team_players)
+            }
+    
+    substitute_rows = []
+    for player in team_players:
+        n_gk, n_def, n_mid, n_for = 0,0,0,0
+        val = all_players[player]['value']
+        pos = all_players[player]['position']
+        if pos == 'Defender':
+            n_def = 1
+        elif pos == 'Midfielder':
+            n_mid = 1
+        elif pos == 'Forward':
+            n_for = 1
+        elif pos == 'Goalkeeper':
+            n_gk = 1
+            
+        p_budget = int(all_players[player]['price']*10 + budget*10)
 
-budget = team_info['info']['Bank Money']
-team_players = team_info['players']['team_players']
+        try:
+            res = find_replacement_players(
+                n_gk,
+                n_def,
+                n_mid,
+                n_for,
+                budget=p_budget,
+                player_data=new_player_stats
+                )
+            row = [player, res[0][0], res[0][2]-val]
+        except ValueError:
+            row = [player, None, None]
+        substitute_rows.append(row)
+        
+    transfer_df = pd.DataFrame(substitute_rows, columns= ['player', 'transfer', 'value'])
+    print(list(transfer_df.loc[transfer_df['value'].idxmax()]))
+    
+get_best_substitute(player_stats, gameweek, team_info)
 
-substitute_dict = {}
-for player in team_players:
-    all_players[player]
+
 # Add code to chose best formation from players chosen and best captain and vice captain for the week
     
     
