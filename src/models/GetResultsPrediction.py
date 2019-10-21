@@ -55,6 +55,7 @@ def get_old_data():
     res['datetime'] = pd.to_datetime(res['datetime'])
     return res
 
+
 # Modify to get last 5 home and last 5 away
 def extract_most_recent_games(df, x):
     new_df = pd.DataFrame()
@@ -62,16 +63,24 @@ def extract_most_recent_games(df, x):
     for i in teams:
         # excludes recently demoted teams
         if len(i) == 3:
-            home = df[df['home_team'] == i].sort_values(by='datetime', ascending=False)
-            away = df[df['away_team'] == i].sort_values(by='datetime', ascending=False)
+            home = df[df['home_team'] == i].sort_values(
+                by='datetime', ascending=False
+                )
+            away = df[df['away_team'] == i].sort_values(
+                by='datetime', ascending=False
+                )
             # newly promoted teams to be based partially/fully off BHA
             if len(home) < round(x/2):
-                temp_home =  df[df['home_team'] == 'BHA'].sort_values(by='datetime', ascending=False)
+                temp_home =  df[df['home_team'] == 'BHA'].sort_values(
+                    by='datetime', ascending=False
+                    )
                 temp_home = temp_home.tail(round(x/2)-len(home))
                 home = pd.concat([home, temp_home])
                 home = home.replace({'BHA': i})
             if len(away) < round(x/2):
-                temp_away =  df[df['away_team'] == 'BHA'].sort_values(by='datetime', ascending=False)
+                temp_away =  df[df['away_team'] == 'BHA'].sort_values(
+                    by='datetime', ascending=False
+                    )
                 temp_away = temp_away.tail(round(x/2)-len(away))
                 away = pd.concat([away, temp_away])
                 away = away.replace({'BHA': i})
@@ -136,22 +145,34 @@ def get_team_results(results):
     return results_dict
 
 
+def GetWinRates(df, z):
+    return len([x for x in df['home_results'] if x == z]) / len(df['home_results'])
+
+
 def generate_results_prediction(results_dict):
     for k,v in results_dict.items():
         home_df = results_dict[k]['home']
         away_df = results_dict[k]['away']
         all_games_df = results_dict[k]['all_games'] 
-    
-        results_dict[k]['win_rate_home'] = len([x for x in home_df['home_results'] if x == 1]) / len(home_df['home_results'])
-        results_dict[k]['draw_rate_home'] = len([x for x in home_df['home_results'] if x == 0]) / len(home_df['home_results'])
-        results_dict[k]['lose_rate_home'] = len([x for x in home_df['home_results'] if x == -1]) / len(home_df['home_results'])
-        results_dict[k]['win_rate_away'] = len([x for x in away_df['home_results'] if x == 1]) / len(away_df['home_results'])
-        results_dict[k]['draw_rate_away'] = len([x for x in away_df['home_results'] if x == 0]) / len(away_df['home_results'])
-        results_dict[k]['lose_rate_away'] = len([x for x in away_df['home_results'] if x == -1]) / len(away_df['home_results'])
-        results_dict[k]['goals_scored_home'] = sum([x for x in results_dict[k]['home']['home_score']]) / len(home_df['home_score'])
-        results_dict[k]['goals_conceded_home'] = sum([x for x in results_dict[k]['home']['away_score']]) / len(home_df['home_score'])
-        results_dict[k]['goals_scored_away'] = sum([x for x in results_dict[k]['away']['away_score']]) / len(away_df['away_score'])
-        results_dict[k]['goals_conceded_away'] = sum([x for x in results_dict[k]['away']['home_score']]) / len(home_df['away_score'])
+
+        results_dict[k]['win_rate_home'] = GetWinRates(home_df, 1)
+        results_dict[k]['draw_rate_home'] = GetWinRates(home_df, 0)
+        results_dict[k]['lose_rate_home'] = GetWinRates(home_df, -1)
+        results_dict[k]['win_rate_away'] = GetWinRates(away_df, 1)
+        results_dict[k]['draw_rate_away'] = GetWinRates(away_df, 0)
+        results_dict[k]['lose_rate_away'] = GetWinRates(away_df, -1)
+        results_dict[k]['goals_scored_home'] = sum(
+                [x for x in results_dict[k]['home']['home_score']]
+                ) / len(home_df['home_score'])
+        results_dict[k]['goals_conceded_home'] = sum(
+                [x for x in results_dict[k]['home']['away_score']]
+                ) / len(home_df['home_score'])
+        results_dict[k]['goals_scored_away'] = sum(
+                [x for x in results_dict[k]['away']['away_score']]
+                ) / len(away_df['away_score'])
+        results_dict[k]['goals_conceded_away'] = sum(
+                [x for x in results_dict[k]['away']['home_score']]
+                ) / len(home_df['away_score'])
     
         home = np.array(home_df['home_results'])
         away = np.array(away_df['away_result'])
@@ -162,11 +183,17 @@ def generate_results_prediction(results_dict):
         all_time = np.array(all_games_df['games_played']).reshape(-1, 1)
     
         reg1 = LinearRegression().fit(h_time,home)
-        results_dict[k]['h_result_prediction'] = float(reg1.predict(int(max(h_time)) + 1))
+        results_dict[k]['h_result_prediction'] = float(
+                reg1.predict(int(max(h_time)) + 1)
+                )
         reg2 = LinearRegression().fit(a_time,away)
-        results_dict[k]['a_result_prediction'] = float(reg2.predict(int(max(a_time)) + 1))
+        results_dict[k]['a_result_prediction'] = float(
+                reg2.predict(int(max(a_time)) + 1)
+                )
         reg3 = LinearRegression().fit(all_time,all_games_scores)
-        results_dict[k]['result_prediction'] = float(reg3.predict(int(max(all_time)) + 1))
+        results_dict[k]['result_prediction'] = float(
+                reg3.predict(int(max(all_time)) + 1)
+                )
         
     return results_dict
 
